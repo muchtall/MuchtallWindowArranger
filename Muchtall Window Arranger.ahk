@@ -1,9 +1,6 @@
 ; Muchtall Window Arranger
 ; Version 20170516 - Add option to close window after resize/reposition (for close-to-tray applications)
 ; Version 20130423 (initial release)
-; Todo/Add Features
-;	Options dialog on save:
-;		Checkbox, Routine for minimize-to-tasktray windows (Outlook)
 
 ; Number of screens which will activate auto-rearrange
 NumberOfScreens = 3

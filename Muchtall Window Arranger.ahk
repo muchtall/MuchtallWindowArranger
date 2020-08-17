@@ -1,48 +1,55 @@
 ; Muchtall Window Arranger
+; Version 20200817 - Now automatically creates and loads separate profiles based upon monitor arrangement
+;                  - Removed static reference to PSPad as a text editor, and instead try to determine default text editor from the registry
 ; Version 20190529 - Added support for multiple saved monitor configurations
 ;                  - Added support for multiple monitor count triggers (probably could be reworked to use a list of values)
 ; Version 20170516 - Add option to close window after resize/reposition (for close-to-tray applications)
 ; Version 20130423 (initial release)
 
-; Number of screens which will activate auto-rearrange
-NumberOfScreens = 3
-NumberOfScreens2 = 4
-
-SavedPositionsFilePath = %A_ScriptDir%
-
-; Include path MUST match the saved positions file path
 #Include %A_ScriptDir%
 
-SysGet, MyMonitors, MonitorCount
-If ( MyMonitors == 1 ) {
-	#Include *i SavedWindowPositions.1.ahk
-	SavedPositionsFile = SavedWindowPositions.1.ahk
+GetMonitorLayout() {
+	MonitorLayout = 
+	SysGet, MonitorCount, 80
+	i := MonitorCount
+	while i > 0 {
+	    SysGet, CurrentMonitor, Monitor, %i%
+	    ;MsgBox, Left: %CurrentMonitorLeft% -- Top: %CurrentMonitorTop% -- Right: %CurrentMonitorRight% -- Bottom %CurrentMonitorBottom%.
+	    MonitorLayout := MonitorLayout CurrentMonitorLeft "_" CurrentMonitorTop "x" CurrentMonitorRight "_" CurrentMonitorBottom
+	    i := i - 1
+	    if (i > 0) {
+	    	MonitorLayout := MonitorLayout "+"
+	    }
+	}
+	;MsgBox, %MonitorLayout%
+	Return %MonitorLayout%
 }
-If ( MyMonitors == 3 || MyMonitors == 4 ) {
-	#Include *i SavedWindowPositions.ahk
-	SavedPositionsFile = SavedWindowPositions.ahk
-}
+MonitorLayout := GetMonitorLayout()
+SavedPositionsFullFilePath := A_ScriptDir "`\SavedWindowPositions." MonitorLayout ".ahk"
 
+if !FileExist(SavedPositionsFullFilePath) {
+	FileAppend, `n, %SavedPositionsFullFilePath%
+	MsgBox,, Muchtall Window Arranger, New monitor arrangement detected.`nGenerated a new profile at %SavedPositionsFullFilePath%
+}
+Run, %SavedPositionsFullFilePath%
 
 Menu, Tray, Icon, %SystemRoot%\system32\SHELL32.dll, 99
 Menu, Tray, Tip, Muchtall Window Arranger
 Menu, tray, add, Save Active Window Position, SaveWindowPos
 Menu, tray, Default, Save Active Window Position
 Menu, tray, add, Open Saved Window Positions List, OpenWindowPosList
-Menu, tray, add, Re-arrange Windows, ReArrangeWindows
+Menu, tray, add, Re-arrange Windows (Reload), ReArrangeWindows
 
 SetTitleMatchMode, 1
 Loop {
-	SysGet, MyMonitors, MonitorCount
-	If ( MyMonitors != MyMonitorsWere && MyMonitorsWere ) {
-		If ( MyMonitors == NumberOfScreens || MyMonitors == NumberOfScreens2 ) {
-			MsgBox,, Muchtall Window Arranger, Detected %MyMonitors% Monitors!`nRe-arranging windows in 5 seconds., 5
-			Reload
-		}
+	MonitorLayout := GetMonitorLayout()
+	If ( MonitorLayout != MonitorLayoutWas && MonitorLayoutWas) {
+		MsgBox,, Muchtall Window Arranger, Monitor arrangement change detected.`nRe-arranging windows in 5 seconds., 5
+		Reload
 	}
 	Else {
 	}
-	MyMonitorsWere := MyMonitors
+	MonitorLayoutWas := MonitorLayout
 	Sleep, 1000
 }
 
@@ -132,17 +139,17 @@ ButtonSave:
 		MyTitleMatchModeArg = RegEx
 	}
 
-	FileAppend, SetTitleMatchMode`, %MyTitleMatchModeArg%`n, %SavedPositionsFilePath%\%SavedPositionsFile%
-	FileAppend, WinRestore`, %MyWinTitle%`, %MyWinText%`, %MyWinTitleExcl%`, %MyWinTextExcl% `n, %SavedPositionsFilePath%\%SavedPositionsFile%
-	FileAppend, WinMove`, %MyWinTitle%`, %MyWinText%`, %MyWinX%`, %MyWinY%`, %MyWinW%`, %MyWinH%`, %MyWinTitleExcl%`, %MyWinTextExcl% `n, %SavedPositionsFilePath%\%SavedPositionsFile%
+	FileAppend, SetTitleMatchMode`, %MyTitleMatchModeArg%`n, %SavedPositionsFullFilePath%
+	FileAppend, WinRestore`, %MyWinTitle%`, %MyWinText%`, %MyWinTitleExcl%`, %MyWinTextExcl% `n, %SavedPositionsFullFilePath%
+	FileAppend, WinMove`, %MyWinTitle%`, %MyWinText%`, %MyWinX%`, %MyWinY%`, %MyWinW%`, %MyWinH%`, %MyWinTitleExcl%`, %MyWinTextExcl% `n, %SavedPositionsFullFilePath%
 	if ( MyWinActivate == "Yes" ) {
-		FileAppend, WinActivate`, %MyWinTitle%`, %MyWinText%`, %MyWinTitleExcl%`, %MyWinTextExcl% `n, %SavedPositionsFilePath%\%SavedPositionsFile%
+		FileAppend, WinActivate`, %MyWinTitle%`, %MyWinText%`, %MyWinTitleExcl%`, %MyWinTextExcl% `n, %SavedPositionsFullFilePath%
 	}
 	if ( MyWinClose == "Yes" ) {
-		FileAppend, WinClose`, %MyWinTitle%`, , %MyWinText%`, %MyWinTitleExcl%`, %MyWinTextExcl% `n, %SavedPositionsFilePath%\%SavedPositionsFile%
+		FileAppend, WinClose`, %MyWinTitle%`, , %MyWinText%`, %MyWinTitleExcl%`, %MyWinTextExcl% `n, %SavedPositionsFullFilePath%
 	}
-	FileAppend, `n, %SavedPositionsFilePath%\%SavedPositionsFile%
-	MsgBox, Saved to %SavedPositionsFilePath%\%SavedPositionsFile%
+	FileAppend, `n, %SavedPositionsFullFilePath%
+	MsgBox, Saved to %SavedPositionsFullFilePath%
 return
 
 ButtonCancel:
@@ -151,7 +158,12 @@ ButtonCancel:
 Return
 
 OpenWindowPosList:
-	Run, pspad.exe "%SavedPositionsFilePath%\%SavedPositionsFile%"
+	;Run, pspad.exe "%SavedPositionsFullFilePath%"
+	; Lets try to get the default editor from the registry
+	RegRead, TextEditorCommandLine, HKEY_CLASSES_ROOT\txtfile\shell\open\command
+	MyRegEx = "`%1"
+	MyEditor := RegExReplace(TextEditorCommandLine, MyRegEx)
+	Run, %MyEditor% "%SavedPositionsFullFilePath%"
 return
 
 

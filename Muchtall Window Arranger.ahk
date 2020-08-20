@@ -1,4 +1,5 @@
 ; Muchtall Window Arranger
+; Version 20200820 - Bug fix to better handle the situation where the "New monitor arrangement" is not dismissed, and then the screen layout changes. Now detects shanges between the loaded profile and the current layout.
 ; Version 20200817 - Now automatically creates and loads separate profiles based upon monitor arrangement
 ;                  - Removed static reference to PSPad as a text editor, and instead try to determine default text editor from the registry
 ; Version 20190529 - Added support for multiple saved monitor configurations
@@ -32,6 +33,7 @@ if !FileExist(SavedPositionsFullFilePath) {
 	MsgBox,, Muchtall Window Arranger, New monitor arrangement detected.`nGenerated a new profile at %SavedPositionsFullFilePath%
 }
 Run, %SavedPositionsFullFilePath%
+LoadedMonitorLayout := MonitorLayout
 
 Menu, Tray, Icon, %SystemRoot%\system32\SHELL32.dll, 99
 Menu, Tray, Tip, Muchtall Window Arranger
@@ -43,13 +45,10 @@ Menu, tray, add, Re-arrange Windows (Reload), ReArrangeWindows
 SetTitleMatchMode, 1
 Loop {
 	MonitorLayout := GetMonitorLayout()
-	If ( MonitorLayout != MonitorLayoutWas && MonitorLayoutWas) {
+	If ( MonitorLayout != LoadedMonitorLayout ) {
 		MsgBox,, Muchtall Window Arranger, Monitor arrangement change detected.`nRe-arranging windows in 5 seconds., 5
 		Reload
 	}
-	Else {
-	}
-	MonitorLayoutWas := MonitorLayout
 	Sleep, 1000
 }
 

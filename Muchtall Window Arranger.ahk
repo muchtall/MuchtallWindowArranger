@@ -157,11 +157,11 @@ ButtonCancel:
 Return
 
 OpenWindowPosList:
-	;Run, pspad.exe "%SavedPositionsFullFilePath%"
-	; Lets try to get the default editor from the registry
+	; Get the default editor from the registry
 	RegRead, TextEditorCommandLine, HKEY_CLASSES_ROOT\txtfile\shell\open\command
-	MyRegEx = "`%1"
+	MyRegEx := ` `%1
 	MyEditor := RegExReplace(TextEditorCommandLine, MyRegEx)
+	Transform, MyEditor, Deref, %MyEditor%
 	Run, %MyEditor% "%SavedPositionsFullFilePath%"
 return
 

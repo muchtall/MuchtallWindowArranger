@@ -1,4 +1,5 @@
 ; Muchtall Window Arranger
+; Version 20210211 - Bug fix to expand the default editor variable so that it actually fires notepad.exe
 ; Version 20200820 - Bug fix to better handle the situation where the "New monitor arrangement" is not dismissed, and then the screen layout changes. Now detects shanges between the loaded profile and the current layout.
 ; Version 20200817 - Now automatically creates and loads separate profiles based upon monitor arrangement
 ;                  - Removed static reference to PSPad as a text editor, and instead try to determine default text editor from the registry
